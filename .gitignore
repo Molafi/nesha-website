@@ -1,0 +1,19 @@
+# Dependencies (none required — zero-dependency backend)
+node_modules/
+
+# SQLite database (auto-created + seeded on first run)
+terra.db
+terra.db-shm
+terra.db-wal
+
+# Runtime settings (auto-created from defaults on first run)
+settings.json
+
+# Uploaded images (keep the folder, ignore contents)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# OS / editor
+.DS_Store
+*.log
+npm-debug.log*

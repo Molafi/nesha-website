@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — Lost in the Wadi · TERRA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    .nf { min-height: 100vh; display: grid; place-items: center; text-align: center; position: relative; overflow: hidden; }
+    #nf-canvas { position: absolute; inset: 0; z-index: 0; }
+    .nf-content { position: relative; z-index: 1; }
+    .nf-content h1 { font-size: clamp(4rem, 16vw, 10rem); color: var(--earth); line-height: 1; }
+    .nf-content p { font-size: 1.2rem; opacity: .8; margin: .5rem 0 1.5rem; }
+  </style>
+</head>
+<body>
+  <section class="nf">
+    <canvas id="nf-canvas"></canvas>
+    <div class="nf-content">
+      <h1>404</h1>
+      <p>This parcel has drifted off the map — lost somewhere in the wadi.</p>
+      <a class="btn btn-primary" href="/">Back to the Land</a>
+    </div>
+  </section>
+  <script src="/js/app.js"></script>
+  <script src="/js/scene.js"></script>
+  <script>
+    (function () {
+      var canvas = document.getElementById('nf-canvas');
+      // A small, sad terrain: a single lonely plot on empty sand.
+      if (window.TerraScene && window.TerraScene.hasThree()) {
+        window.TerraScene.init(canvas, {
+          plots: [{ id: 1, num: '?', map_x: 0, map_z: 0, status: 'Sold' }],
+          autoRotate: true,
+          startCam: { x: 0, y: 18, z: 26 },
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

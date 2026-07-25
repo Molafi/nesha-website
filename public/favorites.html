@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Favorites · TERRA</title>
+  <meta name="description" content="Your saved land parcels on TERRA." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <nav class="nav scrolled">
+    <div class="container">
+      <a class="brand" href="/"><span class="tri">▲</span> TERRA</a>
+      <div class="nav-links">
+        <a href="/#listings">Listings</a>
+        <a href="/favorites">Favorites</a>
+        <a href="/dashboard">Dashboard</a>
+      </div>
+      <div class="nav-tools">
+        <button class="icon-btn" data-action="toggle-currency" title="Toggle currency">JOD</button>
+        <button class="icon-btn" data-action="toggle-theme" title="Toggle dark mode">☾</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container section" style="padding-top:calc(var(--nav-h) + 2rem)">
+    <div class="section-head" style="margin-bottom:2rem">
+      <span class="eyebrow">Your Shortlist</span>
+      <h2>Saved Parcels ♥</h2>
+      <p>Land you've marked to revisit. Saved locally on this device.</p>
+    </div>
+    <div class="grid" id="fav-grid">
+      <div class="empty"><div class="big">♡</div>Loading…</div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="fine">
+        <span>© <span id="year"></span> TERRA · Jordanian Land Platform</span>
+        <a href="/#listings" style="color:var(--gold)">← Browse all listings</a>
+      </div>
+    </div>
+  </footer>
+
+  <a class="wa-float" id="wa-float" href="#" target="_blank" rel="noopener" aria-label="Contact on WhatsApp">
+    <svg viewBox="0 0 32 32"><path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.7 5.4 2 7.7L.5 31.5l8-2.1c2.2 1.2 4.8 1.9 7.5 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5zm8.4 18.7c-.5-.2-2.7-1.3-3.1-1.5-.4-.2-.7-.2-1 .2s-1.1 1.5-1.4 1.8c-.3.2-.5.3-1 .1s-1.9-.7-3.7-2.3c-1.4-1.2-2.3-2.7-2.5-3.2s0-.7.2-1c.2-.2.5-.5.7-.8.2-.3.3-.5.5-.8.2-.3 0-.6 0-.8s-1-2.5-1.4-3.4c-.4-.9-.7-.7-1-.7h-.8c-.3 0-.8.1-1.2.6s-1.6 1.5-1.6 3.8 1.6 4.4 1.9 4.7c.2.3 3.2 4.9 7.8 6.9 4.6 1.9 4.6 1.3 5.4 1.2.8-.1 2.7-1.1 3-2.1.4-1.1.4-2 .3-2.1z"/></svg>
+  </a>
+
+  <script src="/js/app.js"></script>
+  <script>
+    (function () {
+      const T = window.TERRA;
+      document.getElementById('year').textContent = new Date().getFullYear();
+      const grid = document.getElementById('fav-grid');
+
+      async function render() {
+        const favs = T.favorites();
+        if (!favs.length) {
+          grid.innerHTML = '<div class="empty"><div class="big">♡</div>No favorites yet.<br/><a class="btn btn-primary" style="margin-top:1rem" href="/#listings">Find some land →</a></div>';
+          return;
+        }
+        let all = [];
+        try { all = await T.api.listings({}); } catch { T.toast('Could not load listings', 'error'); }
+        const saved = all.filter((l) => favs.includes(l.id));
+        if (!saved.length) {
+          grid.innerHTML = '<div class="empty"><div class="big">♡</div>Your saved parcels are no longer available.</div>';
+          return;
+        }
+        grid.innerHTML = saved.map((l) => T.cardHTML(l)).join('');
+        T.hydrateCards(grid);
+      }
+
+      document.addEventListener('favchange', render);
+      render();
+    })();
+  </script>
+</body>
+</html>

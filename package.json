@@ -1,0 +1,25 @@
+{
+  "name": "terra",
+  "version": "1.0.0",
+  "description": "TERRA — Jordanian Land Listing Platform. A full-stack real-estate/land e-commerce platform with a live Three.js 3D terrain hero.",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "keywords": [
+    "real-estate",
+    "land",
+    "jordan",
+    "threejs",
+    "gsap",
+    "sqlite"
+  ],
+  "author": "TERRA",
+  "license": "MIT",
+  "dependencies": {}
+}

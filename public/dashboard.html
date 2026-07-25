@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard · TERRA</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/dashboard.css" />
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- Three.js for the pin-map picker in Add/Edit form -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body class="dash-body">
+
+  <!-- Password gate -->
+  <div class="gate" id="gate">
+    <form class="gate-card" id="gate-form">
+      <div class="tri">▲</div>
+      <h1>TERRA Admin</h1>
+      <p>Enter the access password to manage listings.</p>
+      <input type="password" id="gate-pass" placeholder="Password" autocomplete="current-password" autofocus />
+      <div class="hint">Hint: the default password is <b>terra2025</b></div>
+    </form>
+  </div>
+
+  <!-- Shell (hidden until authed) -->
+  <div class="dash-shell" id="shell" style="display:none">
+    <!-- Sidebar -->
+    <aside class="dash-side">
+      <div class="brand"><span class="tri">▲</span> TERRA</div>
+      <nav class="dash-nav" id="dash-nav">
+        <button class="active" data-tab="overview"><span class="ico">▤</span> Overview</button>
+        <button data-tab="listings"><span class="ico">▦</span> Listings</button>
+        <button data-tab="add"><span class="ico">＋</span> Add Listing</button>
+        <button data-tab="inquiries"><span class="ico">✉</span> Inquiries <span id="inq-count" class="badge status-Reserved" style="margin-left:auto;padding:.1rem .4rem"></span></button>
+        <button data-tab="settings"><span class="ico">⚙</span> Settings</button>
+      </nav>
+      <div class="side-foot">TERRA Admin · Local build<br/>SQLite · Node · Three.js</div>
+    </aside>
+
+    <!-- Main -->
+    <div class="dash-main">
+      <div class="dash-top">
+        <div class="page-title" id="page-title">Overview</div>
+        <div class="top-tools">
+          <button class="icon-btn bell" title="Notifications">🔔<span class="dot" id="bell-dot" style="display:none"></span></button>
+          <button class="icon-btn" data-action="toggle-theme" title="Toggle dark mode">☾</button>
+          <button class="btn btn-ghost" id="logout-btn">Logout</button>
+        </div>
+      </div>
+
+      <div class="dash-content">
+
+        <!-- OVERVIEW -->
+        <section class="tab active" id="tab-overview">
+          <div class="kpi-grid" id="kpi-grid"></div>
+          <div class="chart-grid">
+            <div class="panel"><h3>Listings by Type</h3><canvas id="chart-type"></canvas></div>
+            <div class="panel"><h3>Inquiries · Last 30 Days</h3><canvas id="chart-inq"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3>Recent Activity</h3>
+            <ul class="activity" id="activity-feed"></ul>
+          </div>
+        </section>
+
+        <!-- LISTINGS MANAGEMENT -->
+        <section class="tab" id="tab-listings">
+          <div class="table-tools">
+            <input class="search" id="lst-search" placeholder="Search listings…" />
+            <select id="lst-filter-status">
+              <option value="all">All statuses</option>
+              <option value="Available">Available</option>
+              <option value="Reserved">Reserved</option>
+              <option value="Sold">Sold</option>
+            </select>
+            <div class="bulk-actions">
+              <button class="mini-btn" id="bulk-sold">Mark Sold</button>
+              <button class="mini-btn danger" id="bulk-delete">Delete Selected</button>
+            </div>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data" id="lst-table">
+              <thead>
+                <tr>
+                  <th style="width:34px"><input type="checkbox" id="check-all" /></th>
+                  <th data-sort="title">Title</th>
+                  <th data-sort="parcel_number">Parcel</th>
+                  <th data-sort="land_type">Type</th>
+                  <th data-sort="area_m2">Area m²</th>
+                  <th data-sort="price_jod">Price</th>
+                  <th data-sort="status">Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="lst-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ADD / EDIT LISTING -->
+        <section class="tab" id="tab-add">
+          <div class="form-card">
+            <h2 id="form-heading" style="font-family:var(--font-display);margin-bottom:1.2rem">Add New Listing</h2>
+            <form id="listing-form">
+              <input type="hidden" id="f-id" />
+              <div class="form-grid">
+                <div class="form-field full"><label>Title *</label><input id="f-title" required /></div>
+                <div class="form-field"><label>Parcel Number *</label><input id="f-parcel" placeholder="Plot 7 / Parcel 165" /></div>
+                <div class="form-field">
+                  <label>Land Type</label>
+                  <select id="f-type">
+                    <option>Agricultural</option><option>Residential</option>
+                    <option>Commercial</option><option>Mixed</option>
+                  </select>
+                </div>
+                <div class="form-field"><label>Area (m²) *</label><input id="f-area" type="number" min="0" step="any" required /></div>
+                <div class="form-field"><label>Price (JOD) *</label><input id="f-price" type="number" min="0" step="any" required /></div>
+                <div class="form-field"><label>Location / District</label><input id="f-location" placeholder="Wadi Al-Seer, Amman" /></div>
+                <div class="form-field">
+                  <label>Status</label>
+                  <select id="f-status"><option>Available</option><option>Reserved</option><option>Sold</option></select>
+                </div>
+                <div class="form-field"><label>Latitude</label><input id="f-lat" type="number" step="any" placeholder="31.9515" /></div>
+                <div class="form-field"><label>Longitude</label><input id="f-lng" type="number" step="any" placeholder="35.8110" /></div>
+
+                <div class="form-field full">
+                  <label>Description</label>
+                  <div class="rich-toolbar">
+                    <button type="button" data-cmd="bold"><b>B</b></button>
+                    <button type="button" data-cmd="italic"><i>I</i></button>
+                    <button type="button" data-cmd="insertUnorderedList">• List</button>
+                  </div>
+                  <div class="rich-editor" id="f-desc" contenteditable="true"></div>
+                </div>
+
+                <div class="form-field full">
+                  <label>Images (drag & drop or click)</label>
+                  <div class="dropzone" id="dropzone">
+                    <div class="dz-ico">⤒</div>
+                    <div>Drop images here, or <b>click to browse</b></div>
+                    <input type="file" id="f-images" accept="image/*" multiple hidden />
+                  </div>
+                  <div class="upload-preview" id="preview"></div>
+                  <div class="pin-hint">Click the ★ on an image to set it as the featured image.</div>
+                </div>
+
+                <div class="form-field full">
+                  <label>Map Position — click the terrain to pin this plot</label>
+                  <div id="pin-map"></div>
+                  <div class="pin-hint">Pinned at: <span id="pin-coords">not set</span></div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn btn-primary" type="submit" id="save-btn">Save Listing</button>
+                <button class="btn btn-ghost" type="button" id="cancel-edit" style="display:none">Cancel Edit</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- INQUIRIES -->
+        <section class="tab" id="tab-inquiries">
+          <div class="data-table-wrap">
+            <table class="data">
+              <thead>
+                <tr><th>Status</th><th>Name</th><th>Contact</th><th>Listing</th><th>Message</th><th>Date</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="inq-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- SETTINGS -->
+        <section class="tab" id="tab-settings">
+          <div class="form-card">
+            <h2 style="font-family:var(--font-display);margin-bottom:1.2rem">Site Settings</h2>
+            <form id="settings-form">
+              <div class="form-grid">
+                <div class="form-field"><label>Site Title</label><input id="s-title" /></div>
+                <div class="form-field"><label>Tagline</label><input id="s-tagline" /></div>
+                <div class="form-field"><label>Contact Email</label><input id="s-email" type="email" /></div>
+                <div class="form-field"><label>WhatsApp Number</label><input id="s-wa" placeholder="962790000000" /></div>
+                <div class="form-field full"><label>Hero Heading</label><input id="s-hero" /></div>
+                <div class="form-field full"><label>Hero Subheading</label><input id="s-herosub" /></div>
+                <div class="form-field"><label>CTA Label</label><input id="s-cta" /></div>
+              </div>
+              <div class="form-actions"><button class="btn btn-primary" type="submit">Save Settings</button></div>
+            </form>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/scene.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

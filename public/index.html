@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TERRA — Jordanian Land, Reimagined in 3D</title>
+  <meta name="description" content="TERRA — curated Jordanian land parcels across the highlands of Amman. Explore each plot as a living 3D terrain: olive terraces, wadi geography, and stone-walled parcels." />
+  <meta name="theme-color" content="#1A1208" />
+
+  <!-- Open Graph / SEO -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="TERRA — Jordanian Land Platform" />
+  <meta property="og:description" content="Own a piece of the wadi. Explore land parcels as a live 3D terrain." />
+  <meta property="og:image" content="/og-image.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,800;1,600&family=Inter:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/main.css" />
+
+  <!-- Three.js + OrbitControls (UMD, global THREE) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+</head>
+<body>
+
+  <!-- Loading screen -->
+  <div id="loader">
+    <div class="logo-mark">
+      <svg viewBox="0 0 320 90" width="240" height="70" aria-label="TERRA">
+        <text x="50%" y="64" text-anchor="middle">TERRA</text>
+      </svg>
+      <div class="tagline">Jordanian Land Platform</div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="container">
+      <a class="brand" href="/"><span class="tri">▲</span> TERRA</a>
+      <div class="nav-links">
+        <a href="/#listings">Listings</a>
+        <a href="/favorites">Favorites</a>
+        <a href="/#about">About</a>
+        <a href="/dashboard">Dashboard</a>
+      </div>
+      <div class="nav-tools">
+        <button class="icon-btn" data-action="toggle-currency" title="Toggle currency">JOD</button>
+        <button class="icon-btn" data-action="toggle-theme" title="Toggle dark mode">☾</button>
+        <button class="icon-btn nav-toggle" data-action="toggle-menu" title="Menu">☰</button>
+      </div>
+    </div>
+  </nav>
+  <div class="mobile-drawer">
+    <a href="/#listings">Listings</a>
+    <a href="/favorites">Favorites</a>
+    <a href="/#about">About</a>
+    <a href="/dashboard">Dashboard</a>
+  </div>
+
+  <!-- HERO with live 3D terrain -->
+  <header class="hero">
+    <canvas id="scene-canvas"></canvas>
+    <div class="plot-float-layer"></div>
+    <div class="hero-overlay">
+      <div class="container">
+        <div class="hero-content">
+          <span class="hero-eyebrow">▲ Wadi Al-Seer · Amman · Jordan</span>
+          <h1 id="hero-heading">Own a Piece <br/>of the <span class="em">Wadi</span></h1>
+          <p class="lead" id="hero-sub">Curated land parcels across the Jordanian highlands — explore each plot as it rises from the earth.</p>
+          <div class="hero-cta">
+            <a class="btn btn-gold" href="#listings">Explore the Land</a>
+            <a class="btn btn-ghost" href="/dashboard" style="color:#F0E6D2;border-color:rgba(240,230,210,.4)">Admin Dashboard</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-hint">
+      <span>Scroll to explore</span>
+      <span class="mouse"></span>
+    </div>
+  </header>
+
+  <!-- Stats bar -->
+  <div class="container">
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="num" data-count="9" id="stat-plots">0</div>
+        <div class="lbl">Plots Available</div>
+      </div>
+      <div class="stat">
+        <div class="num"><span data-count="12400" id="stat-area">0</span></div>
+        <div class="lbl">Total Area (m²)</div>
+      </div>
+      <div class="stat">
+        <div class="num" data-count="45000" data-prefix="" id="stat-price">0</div>
+        <div class="lbl">Starting at (JOD)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LISTINGS -->
+  <section class="section" id="listings">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">The Subdivision</span>
+        <h2>Available Land Parcels</h2>
+        <p>Nine parcels drawn from the wadi — agricultural terraces, residential lots, and commercial frontage. Filter, search, and find your ground.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="search" id="search" placeholder="Search by name, location, or parcel…" aria-label="Search listings" />
+        </div>
+        <select id="sort" aria-label="Sort listings">
+          <option value="newest">Newest</option>
+          <option value="price_asc">Price: Low → High</option>
+          <option value="price_desc">Price: High → Low</option>
+          <option value="area_asc">Area: Small → Large</option>
+          <option value="area_desc">Area: Large → Small</option>
+        </select>
+        <span class="result-count" id="result-count"></span>
+      </div>
+
+      <div class="listings-layout">
+        <!-- Filter sidebar -->
+        <aside class="filter-panel">
+          <h3>Filters</h3>
+          <div class="filter-group">
+            <label>Land Type</label>
+            <div class="chip-row" id="type-chips">
+              <button class="chip active" data-type="all">All</button>
+              <button class="chip" data-type="Agricultural">Agricultural</button>
+              <button class="chip" data-type="Residential">Residential</button>
+              <button class="chip" data-type="Commercial">Commercial</button>
+              <button class="chip" data-type="Mixed">Mixed</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Status</label>
+            <div class="chip-row" id="status-chips">
+              <button class="chip active" data-status="all">All</button>
+              <button class="chip" data-status="Available">Available</button>
+              <button class="chip" data-status="Reserved">Reserved</button>
+              <button class="chip" data-status="Sold">Sold</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Price Range (JOD)</label>
+            <div class="range-row">
+              <input type="number" id="minPrice" placeholder="Min" min="0" />
+              <input type="number" id="maxPrice" placeholder="Max" min="0" />
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Area Range (m²)</label>
+            <div class="range-row">
+              <input type="number" id="minArea" placeholder="Min" min="0" />
+              <input type="number" id="maxArea" placeholder="Max" min="0" />
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-block" id="reset-filters">Reset Filters</button>
+        </aside>
+
+        <!-- Grid -->
+        <div class="grid" id="listings-grid">
+          <div class="empty"><div class="big">▲</div>Loading parcels…</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:3rem">
+        <a class="btn btn-primary" href="#listings" data-cta="browse">Browse All Listings ▲</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="section" id="about" style="background:var(--bg-soft)">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Why TERRA</span>
+        <h2>Land, seen the way it truly is</h2>
+        <p>Every parcel on TERRA is more than a row in a registry. We render the wadi's real geography — stone walls, olive terraces, and the streets of شارع ٢٠ متر — so you can walk the land before you own it.</p>
+      </div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+        <div class="detail-facts"><h3 style="font-family:var(--font-display)">🌿 Living Terrain</h3><p class="muted" style="margin-top:.5rem">Interactive 3D of the subdivision — drag, zoom, and watch parcels rise from the earth.</p></div>
+        <div class="detail-facts"><h3 style="font-family:var(--font-display)">📜 Registry-true</h3><p class="muted" style="margin-top:.5rem">Real parcel numbers, areas in m² and dunums, and zoning for each plot.</p></div>
+        <div class="detail-facts"><h3 style="font-family:var(--font-display)">🤝 Direct Inquiry</h3><p class="muted" style="margin-top:.5rem">Reach out on any plot and speak with us over WhatsApp in seconds.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="cols">
+        <div>
+          <div class="brand"><span class="tri" style="color:var(--gold)">▲</span> TERRA</div>
+          <p class="muted" style="margin-top:1rem;max-width:28rem">Jordanian land, reimagined in three dimensions. Curated parcels across the highlands of Amman.</p>
+        </div>
+        <div>
+          <h4>Explore</h4>
+          <a href="/#listings">Listings</a>
+          <a href="/favorites">Favorites</a>
+          <a href="/dashboard">Dashboard</a>
+        </div>
+        <div>
+          <h4>Contact</h4>
+          <a id="foot-email" href="#">hello@terra.jo</a>
+          <a id="foot-wa" href="#">WhatsApp</a>
+          <a href="#">Amman, Jordan</a>
+        </div>
+      </div>
+      <div class="fine">
+        <span>© <span id="year"></span> TERRA · Jordanian Land Platform</span>
+        <span>Built with Three.js · GSAP · SQLite</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- WhatsApp float -->
+  <a class="wa-float" id="wa-float" href="#" target="_blank" rel="noopener" aria-label="Contact on WhatsApp">
+    <svg viewBox="0 0 32 32"><path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.7 5.4 2 7.7L.5 31.5l8-2.1c2.2 1.2 4.8 1.9 7.5 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5zm0 28.3c-2.5 0-4.8-.7-6.8-1.9l-.5-.3-4.7 1.2 1.3-4.6-.3-.5c-1.3-2-2-4.4-2-6.9C2.3 8.4 8.4 2.3 16 2.3S29.7 8.4 29.7 16 23.6 28.8 16 28.8zm8.4-9.6c-.5-.2-2.7-1.3-3.1-1.5-.4-.2-.7-.2-1 .2s-1.1 1.5-1.4 1.8c-.3.2-.5.3-1 .1s-1.9-.7-3.7-2.3c-1.4-1.2-2.3-2.7-2.5-3.2s0-.7.2-1c.2-.2.5-.5.7-.8.2-.3.3-.5.5-.8.2-.3 0-.6 0-.8s-1-2.5-1.4-3.4c-.4-.9-.7-.7-1-.7h-.8c-.3 0-.8.1-1.2.6s-1.6 1.5-1.6 3.8 1.6 4.4 1.9 4.7c.2.3 3.2 4.9 7.8 6.9 4.6 1.9 4.6 1.3 5.4 1.2.8-.1 2.7-1.1 3-2.1.4-1.1.4-2 .3-2.1-.1-.2-.4-.3-.9-.5z"/></svg>
+  </a>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/scene.js"></script>
+  <script src="/js/scroll.js"></script>
+  <script src="/js/listings.js"></script>
+</body>
+</html>
