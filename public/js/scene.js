@@ -148,6 +148,7 @@
     let renderer, scene, camera, controls, clock;
     let raf = null;
     let plotGroup, plots = {}, dust, windMat;
+    let envGroup, birds = [], clouds = [];
     let mounted = false;
     let autoRotate = true;
     let reducedMotion = false;
@@ -183,6 +184,10 @@
       buildRoad();
       buildBoundaries();
       buildLabels();
+      buildHorizon();      // distant low-poly mountain ring
+      buildEnvironment();  // scattered groves, bushes, boulders (background)
+      buildSky();          // sun disk + drifting clouds
+      buildBirds();        // slow flying birds
       buildDust();
       buildWind();
 
@@ -370,6 +375,198 @@
       return wall;
     }
 
+    // ---- Additional vegetation for a lush landscape ---------------------
+    // Tall, slender cypress — a signature of the Jordanian/Levantine hills.
+    function cypressTree(x, z, s = 1) {
+      const g = new THREE.Group();
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08 * s, 0.14 * s, 0.9 * s, 6),
+        new THREE.MeshStandardMaterial({ color: PAL.trunk, roughness: 1 })
+      );
+      trunk.position.y = 0.45 * s; trunk.castShadow = true; g.add(trunk);
+      const body = new THREE.Mesh(
+        new THREE.ConeGeometry(0.7 * s, 4.2 * s, 8),
+        new THREE.MeshStandardMaterial({ color: 0x3f6b46, roughness: 1, flatShading: true })
+      );
+      body.position.y = 2.7 * s; body.castShadow = true; g.add(body);
+      g.position.set(x, 0, z);
+      return g;
+    }
+
+    // Date palm — trunk with a radiating crown of frond blades.
+    function palmTree(x, z, s = 1) {
+      const g = new THREE.Group();
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16 * s, 0.24 * s, 3.4 * s, 7),
+        new THREE.MeshStandardMaterial({ color: 0x7a5a38, roughness: 1 })
+      );
+      trunk.position.y = 1.7 * s; trunk.castShadow = true; g.add(trunk);
+      const frondMat = new THREE.MeshStandardMaterial({ color: 0x5f9457, roughness: 1, side: THREE.DoubleSide, flatShading: true });
+      const fronds = 7;
+      for (let i = 0; i < fronds; i++) {
+        const frond = new THREE.Mesh(new THREE.ConeGeometry(0.35 * s, 2.4 * s, 4), frondMat);
+        const a = (i / fronds) * Math.PI * 2;
+        frond.position.set(Math.cos(a) * 1.0 * s, 3.4 * s, Math.sin(a) * 1.0 * s);
+        frond.rotation.z = Math.PI / 2.2;
+        frond.rotation.y = -a;
+        frond.castShadow = true;
+        g.add(frond);
+      }
+      g.position.set(x, 0, z);
+      g.rotation.y = Math.random() * Math.PI;
+      return g;
+    }
+
+    // Low desert shrub — a cluster of rough green lumps.
+    function bush(x, z, s = 1) {
+      const g = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x6b8f52, roughness: 1, flatShading: true });
+      const lumps = 3 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < lumps; i++) {
+        const r = (0.4 + Math.random() * 0.35) * s;
+        const lump = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), mat);
+        lump.position.set((Math.random() - 0.5) * 0.9 * s, r * 0.8, (Math.random() - 0.5) * 0.9 * s);
+        lump.castShadow = true;
+        g.add(lump);
+      }
+      g.position.set(x, 0, z);
+      return g;
+    }
+
+    // Weathered boulder — faceted stone.
+    function boulder(x, z, s = 1) {
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry((0.6 + Math.random() * 0.7) * s, 0),
+        new THREE.MeshStandardMaterial({ color: 0xb7a382, roughness: 1, flatShading: true })
+      );
+      rock.position.set(x, 0.25 * s, z);
+      rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      rock.scale.y = 0.7;
+      rock.castShadow = true; rock.receiveShadow = true;
+      return rock;
+    }
+
+    // Approx height of the undulating ground at (x,z) so props sit on it.
+    function groundHeight(x, z) {
+      const d = Math.sqrt(x * x + z * z);
+      return Math.sin(x * 0.06) * Math.cos(z * 0.05) * 1.4 - Math.max(0, (d - 70) * 0.08);
+    }
+
+    // Is this point clear of the central plot/road area?
+    function inPlotZone(x, z) {
+      return (x > -22 && x < 22 && z > -15 && z < 20);
+    }
+
+    // Scatter a lush landscape in a ring AROUND the subdivision.
+    function buildEnvironment() {
+      envGroup = new THREE.Group();
+      const count = opts.mini ? 60 : 240;
+      let placed = 0, guard = 0;
+      while (placed < count && guard < count * 8) {
+        guard++;
+        const ang = Math.random() * Math.PI * 2;
+        const rad = 24 + Math.random() * 74;           // ring: outside the plots
+        const x = Math.cos(ang) * rad + (Math.random() - 0.5) * 8;
+        const z = Math.sin(ang) * rad + (Math.random() - 0.5) * 8;
+        if (inPlotZone(x, z)) continue;
+        const y = groundHeight(x, z);
+        const near = rad < 44;
+        const roll = Math.random();
+        let prop;
+        if (roll < 0.42) prop = oliveTree(x, z, 0.7 + Math.random() * 0.6);
+        else if (roll < 0.66) prop = cypressTree(x, z, 0.8 + Math.random() * 0.7);
+        else if (roll < 0.78) prop = palmTree(x, z, 0.7 + Math.random() * 0.5);
+        else if (roll < 0.92) prop = bush(x, z, 0.8 + Math.random() * 0.8);
+        else prop = boulder(x, z, 0.8 + Math.random() * 0.9);
+        prop.position.y += y;
+        // Only let nearer props cast shadows (shadow camera is finite + perf).
+        if (!near) prop.traverse((c) => { if (c.isMesh) c.castShadow = false; });
+        envGroup.add(prop);
+        placed++;
+      }
+      scene.add(envGroup);
+    }
+
+    // Distant low-poly mountain ring on the horizon for depth.
+    function buildHorizon() {
+      const grp = new THREE.Group();
+      const ridgeMat = new THREE.MeshStandardMaterial({ color: 0xb99a6a, roughness: 1, flatShading: true });
+      const farMat = new THREE.MeshStandardMaterial({ color: 0xcbb287, roughness: 1, flatShading: true });
+      const N = opts.mini ? 18 : 46;
+      for (let i = 0; i < N; i++) {
+        const a = (i / N) * Math.PI * 2 + Math.random() * 0.12;
+        const far = Math.random() > 0.5;
+        const rad = far ? 128 + Math.random() * 26 : 108 + Math.random() * 16;
+        const h = (far ? 12 : 18) + Math.random() * 22;
+        const r = 10 + Math.random() * 16;
+        const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5 + Math.floor(Math.random() * 3)), far ? farMat : ridgeMat);
+        m.position.set(Math.cos(a) * rad, h / 2 - 4, Math.sin(a) * rad);
+        m.rotation.y = Math.random() * Math.PI;
+        grp.add(m);
+      }
+      scene.add(grp);
+    }
+
+    // A glowing sun disk plus soft drifting clouds.
+    function buildSky() {
+      // Sun disk aligned with the directional sun light (upper-right).
+      const sunCanvas = document.createElement('canvas');
+      sunCanvas.width = sunCanvas.height = 128;
+      const sc = sunCanvas.getContext('2d');
+      const grad = sc.createRadialGradient(64, 64, 6, 64, 64, 64);
+      grad.addColorStop(0, 'rgba(255,246,214,1)');
+      grad.addColorStop(0.35, 'rgba(255,221,150,0.95)');
+      grad.addColorStop(1, 'rgba(255,221,150,0)');
+      sc.fillStyle = grad; sc.fillRect(0, 0, 128, 128);
+      const sunTex = new THREE.CanvasTexture(sunCanvas);
+      const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, transparent: true, depthWrite: false, fog: false }));
+      const sd = new THREE.Vector3(40, 55, 30).normalize().multiplyScalar(150);
+      sun.position.copy(sd);
+      sun.scale.set(48, 48, 1);
+      scene.add(sun);
+
+      // Clouds — clusters of flattened white spheres drifting slowly.
+      const cloudMat = new THREE.MeshStandardMaterial({ color: 0xfffaf0, roughness: 1, transparent: true, opacity: 0.85, fog: true });
+      const cN = opts.mini ? 3 : 8;
+      for (let i = 0; i < cN; i++) {
+        const cloud = new THREE.Group();
+        const puffs = 3 + Math.floor(Math.random() * 3);
+        for (let j = 0; j < puffs; j++) {
+          const puff = new THREE.Mesh(new THREE.SphereGeometry(2.4 + Math.random() * 2.2, 8, 8), cloudMat);
+          puff.position.set(j * 3 - puffs, (Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 2);
+          puff.scale.y = 0.55;
+          cloud.add(puff);
+        }
+        const ang = Math.random() * Math.PI * 2;
+        const rad = 55 + Math.random() * 45;
+        cloud.position.set(Math.cos(ang) * rad, 34 + Math.random() * 16, Math.sin(ang) * rad);
+        cloud.userData.speed = 0.4 + Math.random() * 0.6;
+        clouds.push(cloud);
+        scene.add(cloud);
+      }
+    }
+
+    // Simple V-shaped birds gliding in wide circles overhead.
+    function buildBirds() {
+      const N = opts.mini ? 0 : 7;
+      const mat = new THREE.LineBasicMaterial({ color: 0x3a2a1a, transparent: true, opacity: 0.8, fog: true });
+      for (let i = 0; i < N; i++) {
+        const geo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-1.1, 0.5, 0), new THREE.Vector3(0, 0, 0), new THREE.Vector3(1.1, 0.5, 0),
+        ]);
+        const bird = new THREE.Line(geo, mat);
+        bird.userData = {
+          radius: 30 + Math.random() * 45,
+          angle: Math.random() * Math.PI * 2,
+          speed: 0.12 + Math.random() * 0.14,
+          height: 24 + Math.random() * 16,
+          phase: Math.random() * Math.PI * 2,
+        };
+        birds.push(bird);
+        scene.add(bird);
+      }
+    }
+
     function setPlots(list) {
       // clear
       while (plotGroup.children.length) plotGroup.remove(plotGroup.children[0]);
@@ -482,6 +679,28 @@
         p.needsUpdate = true;
       }
       if (windMat) windMat.uniforms.uTime.value = t;
+
+      // Drift clouds slowly across the sky; wrap them around the ring.
+      for (const cloud of clouds) {
+        cloud.position.x += cloud.userData.speed * dt * 2.2;
+        if (cloud.position.x > 110) cloud.position.x = -110;
+      }
+
+      // Birds glide in wide circles with a gentle wing flap + bob.
+      if (!reducedMotion) {
+        for (const bird of birds) {
+          const u = bird.userData;
+          u.angle += u.speed * dt;
+          bird.position.set(
+            Math.cos(u.angle) * u.radius,
+            u.height + Math.sin(t * 0.6 + u.phase) * 1.6,
+            Math.sin(u.angle) * u.radius
+          );
+          bird.rotation.y = -u.angle + Math.PI / 2;
+          const flap = 0.4 + Math.abs(Math.sin(t * 6 + u.phase)) * 0.5;
+          bird.scale.set(1, flap, 1);
+        }
+      }
 
       // gently bob plot number labels + pulse glow
       if (!reducedMotion) {
